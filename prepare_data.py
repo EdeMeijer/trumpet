@@ -129,7 +129,8 @@ unique_chars = sorted(char for char, _ in count_chars([t.lower() for t in all_tw
 
 # Create the numpy array for all features and labels
 # There are 2 features in total. Dimensions are [num_examples x max_time_steps x num_features]
-features = np.zeros([len(all_tweets), max(len(tweet) + 1 for tweet in all_tweets), 2], dtype=int)
+max_steps = max(len(tweet) for tweet in all_tweets)
+features = np.zeros([len(all_tweets), max_steps, 2], dtype=int)
 lengths = np.zeros([len(all_tweets), 1], dtype=int)
 labels = np.zeros_like(features)
 
@@ -154,4 +155,4 @@ np.save(CACHE_DIR + '/labels.npy', labels)
 
 # Save the list of unique characters
 with open(CACHE_DIR + '/settings.json', 'w') as file:
-    json.dump({'chars': unique_chars}, file)
+    json.dump({'chars': unique_chars, 'maxSteps': max_steps}, file)
