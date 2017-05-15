@@ -4,6 +4,7 @@ import os
 import urllib.request as req
 
 import numpy as np
+import random
 from unidecode import unidecode
 
 # Thanks to this guy who did the hard work of collecting all Trump tweets!
@@ -118,6 +119,9 @@ def get_capitalization_feature(tweet):
 
 
 all_tweets = exclude_tweets_with_rare_chars(get_all_tweets())
+random.seed(12345)
+random.shuffle(all_tweets)
+
 print("got all tweets, creating features and labels")
 
 # Unique chars in lower case. We will add an extra binary input for capitalization.
