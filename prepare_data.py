@@ -1,13 +1,16 @@
 import json
 import os
 import urllib.request as req
+import html
+
+from unidecode import unidecode
 
 # Thanks to this guy who did the hard work of collecting all Trump tweets!
 URI_FORMAT = 'http://www.trumptwitterarchive.com/data/realdonaldtrump/{}.json'
 FIRST_YEAR = 2009
 LAST_YEAR = 2017
 CACHE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/cache'
-print(CACHE_DIR)
+MIN_CHAR_OCCURRENCES = 500
 
 
 def download_yearly_batch(year):
@@ -45,19 +48,18 @@ def extract_text(tweets):
     return [tweet['text'] for tweet in tweets]
 
 
-def clean_html_entities(tweets):
+def cleanup(tweets):
     """
-    Convert HTML entities to normal characters
+    Convert HTML entities to normal characters and convert to ASCII
     """
-    # Todo
-    return tweets
+    return [unidecode(html.unescape(tweet)) for tweet in tweets]
 
 
 def get_yearly_tweets(year):
     """
     Get all original tweets from the given year as plain text, filtered and cleaned up
     """
-    return clean_html_entities(extract_text(filter_oc(download_yearly_batch_cached(year))))
+    return cleanup(extract_text(filter_oc(download_yearly_batch_cached(year))))
 
 
 def get_all_tweets():
@@ -71,5 +73,29 @@ def get_all_tweets():
     return all_tweets
 
 
-tweets_text = get_all_tweets()
-print(len(tweets_text))
+def count_chars(tweets):
+    """
+    Count the occurrence of all characters in the given tweets
+    """
+    counts = {}
+    for tweet in tweets:
+        for char in tweet:
+            if char not in counts:
+                counts[char] = 0
+            counts[char] += 1
+    return counts
+
+
+def get_char_exclude_list(tweets):
+    counts = count_chars(tweets)
+    return [char for char, num in counts.items() if num < MIN_CHAR_OCCURRENCES]
+
+
+def exclude_tweets_with_rare_chars(tweets):
+    excludes = get_char_exclude_list(tweets)
+    return [tweet for tweet in tweets if not any(char in tweet for char in excludes)]
+
+
+all_tweets = exclude_tweets_with_rare_chars(get_all_tweets())
+unique_chars = sorted(char for char, _ in count_chars(all_tweets).items())
+
