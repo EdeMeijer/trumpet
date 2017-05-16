@@ -131,7 +131,7 @@ unique_chars = sorted(char for char, _ in count_chars([t.lower() for t in all_tw
 # There are 2 features in total. Dimensions are [num_examples x max_time_steps x num_features]
 max_steps = max(len(tweet) for tweet in all_tweets)
 features = np.zeros([len(all_tweets), max_steps, 2], dtype=int)
-lengths = np.zeros([len(all_tweets), 1], dtype=int)
+mask = np.zeros([len(all_tweets), max_steps], dtype=float)
 labels = np.zeros_like(features)
 
 for i in range(len(all_tweets)):
@@ -143,14 +143,14 @@ for i in range(len(all_tweets)):
 
     features[i, :num_steps, 0] = char_feature
     features[i, :num_steps, 1] = capitalization_feature
-    lengths[i, 0] = num_steps
+    mask[i, :num_steps] = 1
 
     labels[i, :num_steps - 1, 0] = char_feature[1:]
     labels[i, num_steps - 1, 0] = len(unique_chars)
     labels[i, :num_steps - 1, 1] = capitalization_feature[1:]
 
 np.save(CACHE_DIR + '/features.npy', features)
-np.save(CACHE_DIR + '/lengths.npy', lengths)
+np.save(CACHE_DIR + '/mask.npy', mask)
 np.save(CACHE_DIR + '/labels.npy', labels)
 
 # Save the list of unique characters
