@@ -1,13 +1,14 @@
 import json
 import math
 import os
+import random
 
 import numpy as np
 import tensorflow as tf
 
 CACHE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/cache'
-BATCH_SIZE = 64
-L1_UNITS = 100
+BATCH_SIZE = 128
+L1_UNITS = 150
 
 
 def split_test_train(data):
@@ -35,15 +36,15 @@ biases = {
     'L1': tf.Variable(0.1)
 }
 
-x = tf.placeholder(dtype=tf.int32, shape=[None, max_steps, 2], name='x')
-y = tf.placeholder(dtype=tf.int32, shape=[None, max_steps, 2], name='y')
+x = tf.placeholder(dtype=tf.int32, shape=[None, max_steps, 1], name='x')
+y = tf.placeholder(dtype=tf.int32, shape=[None, max_steps, 1], name='y')
 mask = tf.placeholder(dtype=tf.float32, shape=[None, max_steps], name='mask')
 
-char_feature = tf.slice(x, [0, 0, 0], [-1, -1, 1])
-char_feature_one_hot = tf.squeeze(tf.one_hot(char_feature, len(chars), dtype=tf.float32, axis=2), axis=3)
+# char_feature = tf.slice(x, [0, 0, 0], [-1, -1, 1])
+char_feature_one_hot = tf.squeeze(tf.one_hot(x, len(chars), dtype=tf.float32, axis=2), axis=3)
 
-char_labels = tf.slice(y, [0, 0, 0], [-1, -1, 1])
-char_labels_flat = tf.reshape(char_labels, [-1, 1])
+# char_labels = tf.slice(y, [0, 0, 0], [-1, -1, 1])
+char_labels_flat = tf.reshape(y, [-1, 1])
 
 lstm_output_full, _ = tf.nn.dynamic_rnn(
     cell=tf.contrib.rnn.LSTMCell(num_units=L1_UNITS),
@@ -53,6 +54,8 @@ lstm_output_full, _ = tf.nn.dynamic_rnn(
 lstm_output_flat = tf.reshape(lstm_output_full, [-1, L1_UNITS])
 
 logits_full_flat = tf.nn.elu(tf.matmul(lstm_output_flat, weights['L1']) + biases['L1'])
+predictions_flat = tf.nn.softmax(logits_full_flat, 1)
+
 loss_flat = tf.nn.sparse_softmax_cross_entropy_with_logits(
     labels=tf.squeeze(char_labels_flat, axis=1),
     logits=logits_full_flat
@@ -65,6 +68,41 @@ train_op = tf.train.AdamOptimizer().minimize(loss)
 sess = tf.Session()
 
 sess.run(tf.global_variables_initializer())
+
+
+def sample_tweet():
+    # Start with the start symbol, which has label num_chars
+    input = [len(chars)]
+    tweet = ''
+
+    for i in range(143):
+        next = sample_next_char(input)
+        input.append(next)
+        if next == len(chars):
+            break
+        tweet += chars[next]
+            
+    return tweet
+
+
+def sample_next_char(classes):
+    sample_input = np.zeros([1, max_steps, 1])
+    sample_input[:, :len(classes)] = np.array(classes).reshape([1, len(classes), 1])
+
+    predictions = sess.run(
+        predictions_flat,
+        feed_dict={
+            x: sample_input,
+        }
+    )
+    probabilities = predictions[len(classes) - 1]
+    rnd = random.random()
+    accum = 0
+
+    for idx in range(len(probabilities)):
+        accum += probabilities[idx]
+        if accum >= rnd:
+            return idx
 
 
 def calc_test_error():
@@ -105,8 +143,16 @@ def train_epoch(epoch):
             }
         )
     print('EPOCH {} -> {}'.format(epoch, calc_test_error()))
+    print('Sampling tweet....')
+    print('')
+    print('---------------------------------------')
+    print(sample_tweet())
+    print('---------------------------------------')
+    print('')
 
 
 print('EPOCH -1 -> ', calc_test_error())
 for e in range(0, 50):
     train_epoch(e)
+
+

@@ -108,15 +108,7 @@ def get_char_feature(tweet, chars):
     Given a tweet and a character list, determine the 0-based integer class for every character in the tweet and return
     the list of classes.
     """
-    return [chars.index(char) for char in tweet.lower()]
-
-
-def get_capitalization_feature(tweet):
-    """
-    Given a tweet, create a binary feature of whether a character is capitalized. Crucial for genuine Trump tweets.
-    """
-    return [0 if char == char.lower() else 1 for char in tweet]
-
+    return [len(chars)] + [chars.index(char) for char in tweet]
 
 all_tweets = exclude_tweets_with_rare_chars(get_all_tweets())
 random.seed(12345)
@@ -124,30 +116,26 @@ random.shuffle(all_tweets)
 
 print("got all tweets, creating features and labels")
 
-# Unique chars in lower case. We will add an extra binary input for capitalization.
-unique_chars = sorted(char for char, _ in count_chars([t.lower() for t in all_tweets]).items())
+unique_chars = sorted(char for char, _ in count_chars(all_tweets).items())
 
 # Create the numpy array for all features and labels
 # There are 2 features in total. Dimensions are [num_examples x max_time_steps x num_features]
-max_steps = max(len(tweet) for tweet in all_tweets)
-features = np.zeros([len(all_tweets), max_steps, 2], dtype=int)
+max_steps = max(len(tweet) + 1 for tweet in all_tweets)
+features = np.zeros([len(all_tweets), max_steps, 1], dtype=int)
 mask = np.zeros([len(all_tweets), max_steps], dtype=float)
 labels = np.zeros_like(features)
 
 for i in range(len(all_tweets)):
     tweet = all_tweets[i]
-    num_steps = len(tweet)
+    num_steps = len(tweet) + 1
 
     char_feature = get_char_feature(tweet, unique_chars)
-    capitalization_feature = get_capitalization_feature(tweet)
 
     features[i, :num_steps, 0] = char_feature
-    features[i, :num_steps, 1] = capitalization_feature
     mask[i, :num_steps] = 1
 
     labels[i, :num_steps - 1, 0] = char_feature[1:]
     labels[i, num_steps - 1, 0] = len(unique_chars)
-    labels[i, :num_steps - 1, 1] = capitalization_feature[1:]
 
 np.save(CACHE_DIR + '/features.npy', features)
 np.save(CACHE_DIR + '/mask.npy', mask)
