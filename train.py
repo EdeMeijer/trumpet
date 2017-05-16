@@ -10,7 +10,9 @@ CACHE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/cache'
 BATCH_SIZE = 128
 L1_UNITS = 512
 L2_UNITS = 256
-L3_UNITS = 128
+
+TEMPERATURE = 0.8
+L2_WEIGHT = 0.00005
 
 
 def split_test_train(data):
@@ -33,23 +35,19 @@ NUM_OUTPUTS = len(chars) + 1
 # =========== GRAPH ===========
 weights = {
     'L1': tf.Variable(tf.truncated_normal([L1_UNITS, L2_UNITS])),
-    'L2': tf.Variable(tf.truncated_normal([L2_UNITS, L3_UNITS])),
-    'L3': tf.Variable(tf.truncated_normal([L3_UNITS, NUM_OUTPUTS])),
+    'L2': tf.Variable(tf.truncated_normal([L2_UNITS, NUM_OUTPUTS])),
 }
 biases = {
     'L1': tf.Variable(0.1),
     'L2': tf.Variable(0.1),
-    'L3': tf.Variable(0.1),
 }
 
 x = tf.placeholder(dtype=tf.int32, shape=[None, max_steps, 1], name='x')
 y = tf.placeholder(dtype=tf.int32, shape=[None, max_steps, 1], name='y')
 mask = tf.placeholder(dtype=tf.float32, shape=[None, max_steps], name='mask')
 
-# char_feature = tf.slice(x, [0, 0, 0], [-1, -1, 1])
 char_feature_one_hot = tf.squeeze(tf.one_hot(x, len(chars), dtype=tf.float32, axis=2), axis=3)
 
-# char_labels = tf.slice(y, [0, 0, 0], [-1, -1, 1])
 char_labels_flat = tf.reshape(y, [-1, 1])
 
 with tf.variable_scope("L1"):
@@ -64,19 +62,18 @@ with tf.variable_scope("L1"):
 with tf.variable_scope("L2"):
     L2_activation_flat = tf.nn.elu(tf.matmul(L1_activation_flat, weights['L2']) + biases['L2'])
 
-with tf.variable_scope("L3"):
-    L3_activation_flat = tf.nn.elu(tf.matmul(L2_activation_flat, weights['L3']) + biases['L3'])
-
-predictions_flat = tf.nn.softmax(L3_activation_flat, 1)
+predictions_flat = tf.nn.softmax(L2_activation_flat / TEMPERATURE, 1)
 
 loss_flat = tf.nn.sparse_softmax_cross_entropy_with_logits(
     labels=tf.squeeze(char_labels_flat, axis=1),
-    logits=L3_activation_flat
+    logits=L2_activation_flat
 )
 loss_flat_masked = loss_flat * tf.reshape(mask, [-1, 1])
 loss = tf.reduce_mean(loss_flat_masked)
 
-train_op = tf.train.AdamOptimizer().minimize(loss)
+l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables() if 'bias' not in v.name]) * L2_WEIGHT
+
+train_op = tf.train.AdamOptimizer(learning_rate=0.003).minimize(loss + l2_loss)
 
 sess = tf.Session()
 
@@ -116,6 +113,8 @@ def sample_next_char(classes):
         accum += probabilities[idx]
         if accum >= rnd:
             return idx
+    print('PROBS DONT SUM TO 1.0!', np.sum(probabilities))
+    return np.argmax(classes)
 
 
 def calc_test_error():
@@ -147,14 +146,15 @@ def train_epoch(epoch):
     for batch in range(num_batches):
         start = batch * BATCH_SIZE
         end = (batch + 1) * BATCH_SIZE
-        _, err = sess.run(
-            [train_op, loss],
+        _, err, l2 = sess.run(
+            [train_op, loss, l2_loss],
             feed_dict={
                 x: features_train[start:end],
                 y: labels_train[start:end],
                 mask: mask_train[start:end]
             }
         )
+        print(err, l2)
     print('EPOCH {} -> {}'.format(epoch, calc_test_error()))
     print('Sampling tweet....')
     print('')
