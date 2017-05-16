@@ -8,7 +8,9 @@ import tensorflow as tf
 
 CACHE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/cache'
 BATCH_SIZE = 128
-L1_UNITS = 150
+L1_UNITS = 512
+L2_UNITS = 256
+L3_UNITS = 128
 
 
 def split_test_train(data):
@@ -30,10 +32,14 @@ NUM_OUTPUTS = len(chars) + 1
 
 # =========== GRAPH ===========
 weights = {
-    'L1': tf.Variable(tf.truncated_normal([L1_UNITS, NUM_OUTPUTS]))
+    'L1': tf.Variable(tf.truncated_normal([L1_UNITS, L2_UNITS])),
+    'L2': tf.Variable(tf.truncated_normal([L2_UNITS, L3_UNITS])),
+    'L3': tf.Variable(tf.truncated_normal([L3_UNITS, NUM_OUTPUTS])),
 }
 biases = {
-    'L1': tf.Variable(0.1)
+    'L1': tf.Variable(0.1),
+    'L2': tf.Variable(0.1),
+    'L3': tf.Variable(0.1),
 }
 
 x = tf.placeholder(dtype=tf.int32, shape=[None, max_steps, 1], name='x')
@@ -46,19 +52,26 @@ char_feature_one_hot = tf.squeeze(tf.one_hot(x, len(chars), dtype=tf.float32, ax
 # char_labels = tf.slice(y, [0, 0, 0], [-1, -1, 1])
 char_labels_flat = tf.reshape(y, [-1, 1])
 
-lstm_output_full, _ = tf.nn.dynamic_rnn(
-    cell=tf.contrib.rnn.LSTMCell(num_units=L1_UNITS),
-    dtype=tf.float32,
-    inputs=char_feature_one_hot
-)
-lstm_output_flat = tf.reshape(lstm_output_full, [-1, L1_UNITS])
+with tf.variable_scope("L1"):
+    L1_output_full, _ = tf.nn.dynamic_rnn(
+        cell=tf.contrib.rnn.LSTMCell(num_units=L1_UNITS, use_peepholes=True),
+        dtype=tf.float32,
+        inputs=char_feature_one_hot
+    )
+    L1_output_flat = tf.reshape(L1_output_full, [-1, L1_UNITS])
+    L1_activation_flat = tf.nn.elu(tf.matmul(L1_output_flat, weights['L1']) + biases['L1'])
 
-logits_full_flat = tf.nn.elu(tf.matmul(lstm_output_flat, weights['L1']) + biases['L1'])
-predictions_flat = tf.nn.softmax(logits_full_flat, 1)
+with tf.variable_scope("L2"):
+    L2_activation_flat = tf.nn.elu(tf.matmul(L1_activation_flat, weights['L2']) + biases['L2'])
+
+with tf.variable_scope("L3"):
+    L3_activation_flat = tf.nn.elu(tf.matmul(L2_activation_flat, weights['L3']) + biases['L3'])
+
+predictions_flat = tf.nn.softmax(L3_activation_flat, 1)
 
 loss_flat = tf.nn.sparse_softmax_cross_entropy_with_logits(
     labels=tf.squeeze(char_labels_flat, axis=1),
-    logits=logits_full_flat
+    logits=L3_activation_flat
 )
 loss_flat_masked = loss_flat * tf.reshape(mask, [-1, 1])
 loss = tf.reduce_mean(loss_flat_masked)
@@ -75,14 +88,14 @@ def sample_tweet():
     input = [len(chars)]
     tweet = ''
 
-    for i in range(143):
-        next = sample_next_char(input)
+    for i in range(300):
+        next = sample_next_char(input[-143:])
         input.append(next)
         if next == len(chars):
             break
         tweet += chars[next]
-            
-    return tweet
+
+    return tweet.strip()
 
 
 def sample_next_char(classes):
@@ -151,8 +164,10 @@ def train_epoch(epoch):
     print('')
 
 
+saver = tf.train.Saver()
+
 print('EPOCH -1 -> ', calc_test_error())
-for e in range(0, 50):
+for e in range(0, 300):
     train_epoch(e)
-
-
+    save_path = saver.save(sess, CACHE_DIR + "/model.ckpt", global_step=e)
+    print("Model saved in file: %s" % save_path)

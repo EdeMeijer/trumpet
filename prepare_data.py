@@ -1,10 +1,10 @@
 import html
 import json
 import os
+import random
 import urllib.request as req
 
 import numpy as np
-import random
 from unidecode import unidecode
 
 # Thanks to this guy who did the hard work of collecting all Trump tweets!
@@ -40,7 +40,18 @@ def filter_oc(tweets):
     """
     Filter out retweets and replies, because we are only interested in original Trump prose
     """
-    return [tweet for tweet in tweets if not tweet['is_retweet'] and tweet['in_reply_to_user_id_str'] is None]
+    return [tweet for tweet in tweets if is_oc(tweet)]
+
+
+def is_oc(tweet):
+    if tweet['is_retweet']:
+        return False
+    if tweet['in_reply_to_user_id_str'] is not None:
+        return False
+    if '@realDonaldTrump' in tweet['text']:
+        # Here he's copying other peoples tweets and responding to them, but they're not replies or retweets
+        return False
+    return True
 
 
 def extract_text(tweets):
@@ -110,16 +121,16 @@ def get_char_feature(tweet, chars):
     """
     return [len(chars)] + [chars.index(char) for char in tweet]
 
+
 all_tweets = exclude_tweets_with_rare_chars(get_all_tweets())
 random.seed(12345)
 random.shuffle(all_tweets)
 
-print("got all tweets, creating features and labels")
+print("got all {} tweets, creating features and labels".format(len(all_tweets)))
 
 unique_chars = sorted(char for char, _ in count_chars(all_tweets).items())
 
 # Create the numpy array for all features and labels
-# There are 2 features in total. Dimensions are [num_examples x max_time_steps x num_features]
 max_steps = max(len(tweet) + 1 for tweet in all_tweets)
 features = np.zeros([len(all_tweets), max_steps, 1], dtype=int)
 mask = np.zeros([len(all_tweets), max_steps], dtype=float)
