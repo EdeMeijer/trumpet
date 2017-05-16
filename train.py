@@ -52,7 +52,7 @@ lstm_output_full, _ = tf.nn.dynamic_rnn(
 )
 lstm_output_flat = tf.reshape(lstm_output_full, [-1, L1_UNITS])
 
-logits_full_flat = tf.matmul(lstm_output_flat, weights['L1']) + biases['L1']
+logits_full_flat = tf.nn.elu(tf.matmul(lstm_output_flat, weights['L1']) + biases['L1'])
 loss_flat = tf.nn.sparse_softmax_cross_entropy_with_logits(
     labels=tf.squeeze(char_labels_flat, axis=1),
     logits=logits_full_flat
@@ -94,8 +94,6 @@ def train_epoch(epoch):
     num_examples = features_train.shape[0]
     num_batches = math.ceil(num_examples / BATCH_SIZE)
     for batch in range(num_batches):
-        if batch % 10 == 0:
-            print('batch ', batch)
         start = batch * BATCH_SIZE
         end = (batch + 1) * BATCH_SIZE
         _, err = sess.run(
@@ -110,5 +108,5 @@ def train_epoch(epoch):
 
 
 print('EPOCH -1 -> ', calc_test_error())
-for e in range(0, 5):
+for e in range(0, 50):
     train_epoch(e)
