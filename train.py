@@ -7,16 +7,16 @@ import numpy as np
 import tensorflow as tf
 
 CACHE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/cache'
-BATCH_SIZE = 128
-L1_UNITS = 512
-L2_UNITS = 256
+BATCH_SIZE = 64
+L1_UNITS = 1024
+L2_UNITS = 512
 
 TEMPERATURE = 0.8
 L2_WEIGHT = 0.00005
 
 
 def split_test_train(data):
-    test_examples = round(data.shape[0] * 0.2)
+    test_examples = round(data.shape[0] * 0.1)
     return data[:test_examples], data[test_examples:]
 
 
@@ -34,8 +34,8 @@ NUM_OUTPUTS = len(chars) + 1
 
 # =========== GRAPH ===========
 weights = {
-    'L1': tf.Variable(tf.truncated_normal([L1_UNITS, L2_UNITS])),
-    'L2': tf.Variable(tf.truncated_normal([L2_UNITS, NUM_OUTPUTS])),
+    'L1': tf.get_variable("L1-w", [L1_UNITS, L2_UNITS], initializer=tf.contrib.layers.xavier_initializer()),
+    'L2': tf.get_variable("L2-w", [L2_UNITS, NUM_OUTPUTS], initializer=tf.contrib.layers.xavier_initializer())
 }
 biases = {
     'L1': tf.Variable(0.1),
