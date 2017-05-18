@@ -179,7 +179,7 @@ def create_training_data():
     max_steps = max(len(tweet) + 1 for tweet in all_tweets)
 
     # Create the numpy array for all features and labels
-    features = np.zeros([len(all_tweets), max_steps, 1], dtype=int)
+    features = np.zeros([len(all_tweets), max_steps], dtype=int)
     labels = np.zeros_like(features)
     mask = np.zeros([len(all_tweets), max_steps], dtype=float)
 
@@ -187,8 +187,8 @@ def create_training_data():
         tweet = all_tweets[i]
         num_steps = len(tweet) + 1
 
-        features[i, :num_steps, 0] = get_features(tweet, unique_chars)
-        labels[i, :num_steps, 0] = get_labels(tweet, unique_chars)
+        features[i, :num_steps] = get_features(tweet, unique_chars)
+        labels[i, :num_steps] = get_labels(tweet, unique_chars)
         mask[i, :num_steps] = 1
 
     return features, labels, mask, {'chars': unique_chars, 'maxSteps': max_steps}

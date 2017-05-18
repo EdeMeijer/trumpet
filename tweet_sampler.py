@@ -28,8 +28,8 @@ class TweetSampler:
         return tweet.strip()
 
     def sample_next_class(self, classes):
-        sample_input = np.zeros([1, self.model.max_steps, 1])
-        sample_input[:, :len(classes)] = np.array(classes).reshape([1, len(classes), 1])
+        sample_input = np.zeros([1, self.model.max_steps])
+        sample_input[:, :len(classes)] = classes
 
         predictions = self.session.run(
             self.predictions_flat,
@@ -40,7 +40,6 @@ class TweetSampler:
         probabilities = predictions[len(classes) - 1]
         rnd = random.random()
         accum = 0
-
         for idx in range(len(probabilities)):
             accum += probabilities[idx]
             if accum >= rnd:

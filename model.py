@@ -24,14 +24,11 @@ class Model:
         out_weights = make_weight_variable("out-weights", l2_units, len(chars) + 1)
         out_biases = tf.Variable(0.1, name='out-biases')
 
-        self.features = tf.placeholder(dtype=tf.int32, shape=[None, max_steps, 1])
-        self.labels = tf.placeholder(dtype=tf.int32, shape=[None, max_steps, 1])
+        self.features = tf.placeholder(dtype=tf.int32, shape=[None, max_steps])
+        self.labels = tf.placeholder(dtype=tf.int32, shape=[None, max_steps])
         self.mask = tf.placeholder(dtype=tf.float32, shape=[None, max_steps])
 
-        features_one_hot = tf.squeeze(
-            tf.one_hot(self.features, len(chars) + 1, dtype=tf.float32, axis=2),
-            axis=3
-        )
+        features_one_hot = tf.one_hot(self.features, len(chars) + 1, dtype=tf.float32)
 
         lstm_3d, _ = tf.nn.dynamic_rnn(
             cell=tf.contrib.rnn.LSTMCell(num_units=lstm_units, use_peepholes=True),
