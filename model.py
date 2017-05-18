@@ -12,9 +12,6 @@ def make_weight_variable(name, num_inputs, num_outputs):
 class Model:
     def __init__(self, chars, max_steps, lstm_units=250, l1_units=200, l2_units=150,
                  learning_rate=0.001, l2=0.001):
-        """
-
-        """
         self.chars = chars
         self.max_steps = max_steps
 
