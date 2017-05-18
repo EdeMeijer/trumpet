@@ -12,7 +12,8 @@ L1_UNITS = 1024
 L2_UNITS = 512
 
 TEMPERATURE = 0.8
-L2_WEIGHT = 0.00005
+L2_WEIGHT = 0.00001
+NUM_EPOCHS = 300
 
 
 def split_test_train(data):
@@ -143,6 +144,8 @@ def calc_test_error():
 def train_epoch(epoch):
     num_examples = features_train.shape[0]
     num_batches = math.ceil(num_examples / BATCH_SIZE)
+    total_err = 0
+    total_l2 = 0
     for batch in range(num_batches):
         start = batch * BATCH_SIZE
         end = (batch + 1) * BATCH_SIZE
@@ -154,8 +157,10 @@ def train_epoch(epoch):
                 mask: mask_train[start:end]
             }
         )
-        print(err, l2)
-    print('EPOCH {} -> {}'.format(epoch, calc_test_error()))
+        total_err += err
+        total_l2 += l2
+    print('EPOCH {}: train = {}, test = {}, L2 = {}'.format(epoch, total_err / num_batches, calc_test_error(),
+                                                            total_l2 / num_batches))
     print('Sampling tweet....')
     print('')
     print('---------------------------------------')
@@ -164,10 +169,10 @@ def train_epoch(epoch):
     print('')
 
 
-saver = tf.train.Saver()
+saver = tf.train.Saver(max_to_keep=NUM_EPOCHS)
 
 print('EPOCH -1 -> ', calc_test_error())
-for e in range(0, 300):
+for e in range(0, NUM_EPOCHS):
     train_epoch(e)
-    save_path = saver.save(sess, CACHE_DIR + "/model.ckpt", global_step=e)
+    save_path = saver.save(sess, CACHE_DIR + "/model/model.ckpt", global_step=e)
     print("Model saved in file: %s" % save_path)
