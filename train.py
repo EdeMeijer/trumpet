@@ -2,10 +2,9 @@ import json
 import math
 import os
 
-import numpy as np
 import tensorflow as tf
 
-from data_set import DataSet
+import data_set
 from model import Model
 from tweet_sampler import TweetSampler
 
@@ -15,13 +14,7 @@ BATCH_SIZE = 64
 TEMPERATURE = 0.8
 NUM_EPOCHS = 200
 
-data = DataSet(
-    np.load(CACHE_DIR + '/features.npy'),
-    np.load(CACHE_DIR + '/labels.npy'),
-    np.load(CACHE_DIR + '/mask.npy')
-)
-
-test_data, train_data = data.split_test_train()
+test_data, train_data = data_set.load().split_test_train()
 
 with open(CACHE_DIR + '/settings.json') as file:
     settings = json.load(file)
@@ -86,13 +79,12 @@ def train_epoch(epoch):
         total_l2 += l2
         num_batches += 1
 
-    print('EPOCH {}: train = {}, test = {}, L2 = {}'.format(
+    print('EPOCH {}: train = {:.5}, test = {:.5}, L2 = {:.5}'.format(
         epoch, total_err / num_batches, calc_test_error(), total_l2 / num_batches))
     output_tweet_sample()
 
 
 saver = tf.train.Saver(max_to_keep=NUM_EPOCHS)
-print('EPOCH -1 -> ', calc_test_error())
 output_tweet_sample()
 for e in range(0, NUM_EPOCHS):
     train_epoch(e)

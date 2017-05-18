@@ -1,6 +1,16 @@
-def _split_test_train(data):
-    test_examples = round(data.shape[0] * 0.1)
-    return data[:test_examples], data[test_examples:]
+import os
+
+import numpy as np
+
+CACHE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/cache'
+
+
+def load():
+    return DataSet(
+        np.load(CACHE_DIR + '/features.npy'),
+        np.load(CACHE_DIR + '/labels.npy'),
+        np.load(CACHE_DIR + '/mask.npy')
+    )
 
 
 class DataSet:
