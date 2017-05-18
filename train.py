@@ -14,6 +14,7 @@ L2_UNITS = 512
 TEMPERATURE = 0.8
 L2_WEIGHT = 0.00005
 NUM_EPOCHS = 300
+LEARNING_RATE = 0.001
 
 
 def split_test_train(data):
@@ -35,8 +36,8 @@ NUM_OUTPUTS = len(chars) + 1
 
 # =========== GRAPH ===========
 weights = {
-    'L1': tf.get_variable("L1-w", [L1_UNITS, L2_UNITS], initializer=tf.contrib.layers.xavier_initializer()),
-    'L2': tf.get_variable("L2-w", [L2_UNITS, NUM_OUTPUTS], initializer=tf.contrib.layers.xavier_initializer())
+    'L1': tf.get_variable("L1-w", [L1_UNITS, L2_UNITS], initializer=tf.contrib.layers.variance_scaling_initializer()),
+    'L2': tf.get_variable("L2-w", [L2_UNITS, NUM_OUTPUTS], initializer=tf.contrib.layers.variance_scaling_initializer())
 }
 biases = {
     'L1': tf.Variable(0.1),
@@ -58,10 +59,10 @@ with tf.variable_scope("L1"):
         inputs=char_feature_one_hot
     )
     L1_output_flat = tf.reshape(L1_output_full, [-1, L1_UNITS])
-    L1_activation_flat = tf.nn.elu(tf.matmul(L1_output_flat, weights['L1']) + biases['L1'])
+    L1_activation_flat = tf.nn.relu(tf.matmul(L1_output_flat, weights['L1']) + biases['L1'])
 
 with tf.variable_scope("L2"):
-    L2_activation_flat = tf.nn.elu(tf.matmul(L1_activation_flat, weights['L2']) + biases['L2'])
+    L2_activation_flat = tf.nn.relu(tf.matmul(L1_activation_flat, weights['L2']) + biases['L2'])
 
 predictions_flat = tf.nn.softmax(L2_activation_flat / TEMPERATURE, 1)
 
@@ -74,7 +75,7 @@ loss = tf.reduce_mean(loss_flat_masked)
 
 l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables() if 'bias' not in v.name]) * L2_WEIGHT
 
-train_op = tf.train.AdamOptimizer(learning_rate=0.003).minimize(loss + l2_loss)
+train_op = tf.train.AdamOptimizer(learning_rate=LEARNING_RATE).minimize(loss + l2_loss)
 
 sess = tf.Session()
 
@@ -87,7 +88,7 @@ def sample_tweet():
     tweet = ''
 
     for i in range(300):
-        next = sample_next_char(input[-settings['max_steps']:])
+        next = sample_next_char(input[-max_steps:])
         input.append(next)
         if next == len(chars):
             break
