@@ -19,9 +19,9 @@ class TweetSampler:
 
         for i in range(MAX_SAMPLE_LENGTH):
             next_class = self.sample_next_class(features[-self.model.max_steps:])
-            features.append(next_class)
             if next_class == len(self.model.chars):
                 break
+            features.append(next_class)
             tweet += self.model.chars[next_class]
 
         return tweet.strip()
