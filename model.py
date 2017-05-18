@@ -32,8 +32,7 @@ class Model:
         self.mask = tf.placeholder(dtype=tf.float32, shape=[None, max_steps])
 
         features_one_hot = tf.squeeze(
-            # Todo is this len(chars) correct? What happened to the 'tweet start' char?
-            tf.one_hot(self.features, len(chars), dtype=tf.float32, axis=2),
+            tf.one_hot(self.features, len(chars) + 1, dtype=tf.float32, axis=2),
             axis=3
         )
 
