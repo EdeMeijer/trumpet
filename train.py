@@ -12,7 +12,7 @@ L1_UNITS = 1024
 L2_UNITS = 512
 
 TEMPERATURE = 0.8
-L2_WEIGHT = 0.00001
+L2_WEIGHT = 0.00005
 NUM_EPOCHS = 300
 
 
@@ -87,7 +87,7 @@ def sample_tweet():
     tweet = ''
 
     for i in range(300):
-        next = sample_next_char(input[-143:])
+        next = sample_next_char(input[-settings['max_steps']:])
         input.append(next)
         if next == len(chars):
             break
@@ -114,7 +114,6 @@ def sample_next_char(classes):
         accum += probabilities[idx]
         if accum >= rnd:
             return idx
-    print('PROBS DONT SUM TO 1.0!', np.sum(probabilities))
     return np.argmax(classes)
 
 
@@ -141,6 +140,15 @@ def calc_test_error():
     return sum / weight
 
 
+def output_tweet_sample():
+    print('Sampling tweet....')
+    print('')
+    print('---------------------------------------')
+    print(sample_tweet())
+    print('---------------------------------------')
+    print('')
+
+
 def train_epoch(epoch):
     num_examples = features_train.shape[0]
     num_batches = math.ceil(num_examples / BATCH_SIZE)
@@ -161,17 +169,13 @@ def train_epoch(epoch):
         total_l2 += l2
     print('EPOCH {}: train = {}, test = {}, L2 = {}'.format(epoch, total_err / num_batches, calc_test_error(),
                                                             total_l2 / num_batches))
-    print('Sampling tweet....')
-    print('')
-    print('---------------------------------------')
-    print(sample_tweet())
-    print('---------------------------------------')
-    print('')
+    output_tweet_sample()
 
 
 saver = tf.train.Saver(max_to_keep=NUM_EPOCHS)
 
 print('EPOCH -1 -> ', calc_test_error())
+output_tweet_sample()
 for e in range(0, NUM_EPOCHS):
     train_epoch(e)
     save_path = saver.save(sess, CACHE_DIR + "/model/model.ckpt", global_step=e)
