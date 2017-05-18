@@ -11,7 +11,7 @@ class TweetSampler:
     def __init__(self, session, model, temperature=1.0):
         self.session = session
         self.model = model
-        self.predictions_flat = tf.nn.softmax(model.logits / temperature, 1)
+        self.predictions_flat = tf.nn.softmax(model.out_logits / temperature, 1)
 
     def sample(self):
         # Start with the start symbol, which has label num_chars

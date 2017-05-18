@@ -15,19 +15,12 @@ class Model:
         self.chars = chars
         self.max_steps = max_steps
 
-        l1_weights = make_weight_variable("l1-weights", lstm_units, l1_units)
-        l1_biases = tf.Variable(0.1, name='L1-biases')
-
-        l2_weights = make_weight_variable("l2-weights", l1_units, l2_units)
-        l2_biases = tf.Variable(0.1, name='L2-biases')
-
-        out_weights = make_weight_variable("out-weights", l2_units, len(chars) + 1)
-        out_biases = tf.Variable(0.1, name='out-biases')
-
+        # Define placeholders for training data
         self.features = tf.placeholder(dtype=tf.int32, shape=[None, max_steps])
         self.labels = tf.placeholder(dtype=tf.int32, shape=[None, max_steps])
         self.mask = tf.placeholder(dtype=tf.float32, shape=[None, max_steps])
 
+        # Define LSTM layer
         features_one_hot = tf.one_hot(self.features, len(chars) + 1, dtype=tf.float32)
 
         lstm_3d, _ = tf.nn.dynamic_rnn(
@@ -37,15 +30,27 @@ class Model:
         )
         lstm_flat = tf.reshape(lstm_3d, [-1, lstm_units])
 
+        # Define first RELU layer
+        l1_weights = make_weight_variable("l1-weights", lstm_units, l1_units)
+        l1_biases = tf.Variable(0.1, name='L1-biases')
         layer1 = tf.nn.relu(tf.matmul(lstm_flat, l1_weights) + l1_biases)
-        layer2 = tf.nn.relu(tf.matmul(layer1, l2_weights) + l2_biases)
-        self.logits = tf.matmul(layer2, out_weights) + out_biases
 
+        # Define second RELU layer
+        l2_weights = make_weight_variable("l2-weights", l1_units, l2_units)
+        l2_biases = tf.Variable(0.1, name='L2-biases')
+        layer2 = tf.nn.relu(tf.matmul(layer1, l2_weights) + l2_biases)
+
+        # Define output layer
+        out_weights = make_weight_variable("out-weights", l2_units, len(chars) + 1)
+        out_biases = tf.Variable(0.1, name='out-biases')
+        self.out_logits = tf.matmul(layer2, out_weights) + out_biases
+
+        # Define training objective
         loss_flat = tf.nn.sparse_softmax_cross_entropy_with_logits(
-            labels=tf.squeeze(tf.reshape(self.labels, [-1, 1]), axis=1),
-            logits=self.logits
+            labels=tf.reshape(self.labels, [-1]),
+            logits=self.out_logits
         )
-        loss_flat_masked = loss_flat * tf.reshape(self.mask, [-1, 1])
+        loss_flat_masked = loss_flat * tf.reshape(self.mask, [-1])
         self.loss = tf.reduce_mean(loss_flat_masked)
 
         weight_vars = [v for v in tf.trainable_variables() if 'bias' not in v.name]
