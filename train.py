@@ -10,8 +10,6 @@ from tweet_sampler import TweetSampler
 
 CACHE_DIR = os.path.dirname(os.path.abspath(__file__)) + '/cache'
 BATCH_SIZE = 64
-
-TEMPERATURE = 0.8
 NUM_EPOCHS = 200
 
 test_data, train_data = data_set.load().split_test_train()
@@ -35,16 +33,13 @@ sampler = TweetSampler(sess, model, temperature=0.8)
 
 
 def output_tweet_sample():
-    print('Sampling tweet....')
-    print('')
-    print('---------------------------------------')
+    print('Sampling tweet....\n\n---------------------------------------')
     print(sampler.sample())
-    print('---------------------------------------')
-    print('')
+    print('---------------------------------------\n')
 
 
-def process_data(data_set, ops):
-    num_examples = data_set.features.shape[0]
+def process_data(data, ops):
+    num_examples = data.features.shape[0]
     num_batches = math.ceil(num_examples / BATCH_SIZE)
     for batch in range(num_batches):
         start = batch * BATCH_SIZE
@@ -52,9 +47,9 @@ def process_data(data_set, ops):
         yield sess.run(
             ops,
             feed_dict={
-                model.features: data_set.features[start:end],
-                model.labels: data_set.labels[start:end],
-                model.mask: data_set.mask[start:end]
+                model.features: data.features[start:end],
+                model.labels: data.labels[start:end],
+                model.mask: data.mask[start:end]
             }
         )
 
@@ -86,7 +81,7 @@ def train_epoch(epoch):
 
 saver = tf.train.Saver(max_to_keep=NUM_EPOCHS)
 output_tweet_sample()
-for e in range(0, NUM_EPOCHS):
-    train_epoch(e)
-    save_path = saver.save(sess, CACHE_DIR + "/model/model.ckpt", global_step=e)
+for epoch in range(0, NUM_EPOCHS):
+    train_epoch(epoch)
+    save_path = saver.save(sess, CACHE_DIR + "/model/model.ckpt", global_step=epoch)
     print("Model saved in file: %s" % save_path)

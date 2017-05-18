@@ -24,20 +24,20 @@ class Model:
         features_one_hot = tf.one_hot(self.features, len(chars) + 1, dtype=tf.float32)
 
         lstm_3d, _ = tf.nn.dynamic_rnn(
-            cell=tf.contrib.rnn.LSTMCell(num_units=lstm_units, use_peepholes=True),
+            cell=tf.contrib.rnn.LSTMCell(num_units=lstm_units),
             dtype=tf.float32,
             inputs=features_one_hot
         )
         lstm_flat = tf.reshape(lstm_3d, [-1, lstm_units])
 
-        # Define first RELU layer
+        # Define first ReLU layer
         l1_weights = make_weight_variable("l1-weights", lstm_units, l1_units)
-        l1_biases = tf.Variable(0.1, name='L1-biases')
+        l1_biases = tf.Variable(0.1, name='l1-biases')
         layer1 = tf.nn.relu(tf.matmul(lstm_flat, l1_weights) + l1_biases)
 
-        # Define second RELU layer
+        # Define second ReLU layer
         l2_weights = make_weight_variable("l2-weights", l1_units, l2_units)
-        l2_biases = tf.Variable(0.1, name='L2-biases')
+        l2_biases = tf.Variable(0.1, name='l2-biases')
         layer2 = tf.nn.relu(tf.matmul(layer1, l2_weights) + l2_biases)
 
         # Define output layer

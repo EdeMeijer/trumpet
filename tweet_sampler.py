@@ -3,7 +3,6 @@ import random
 import numpy as np
 import tensorflow as tf
 
-# Max length can go over the normal tweet length limit to give the model some slack
 MAX_SAMPLE_LENGTH = 200
 
 
