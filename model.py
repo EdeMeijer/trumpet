@@ -52,7 +52,7 @@ class Model:
             logits=self.out_logits
         )
         loss_flat_masked = loss_flat * tf.reshape(self.mask, [-1])
-        self.loss = tf.reduce_mean(loss_flat_masked)
+        self.loss = tf.reduce_sum(loss_flat_masked) / tf.reduce_sum(self.mask)
 
         weight_vars = [v for v in tf.trainable_variables() if 'bias' not in v.name]
         self.l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in weight_vars]) * l2
