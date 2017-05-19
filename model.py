@@ -32,17 +32,18 @@ class Model:
 
         # Define first ReLU layer
         l1_weights = make_weight_variable("l1-weights", lstm_units, l1_units)
-        l1_biases = tf.Variable(0.1, name='l1-biases')
+        l1_biases = tf.Variable(tf.constant(0.1, shape=[l1_units]), name='l1-biases')
         layer1 = tf.nn.relu(tf.matmul(lstm_flat, l1_weights) + l1_biases)
 
         # Define second ReLU layer
         l2_weights = make_weight_variable("l2-weights", l1_units, l2_units)
-        l2_biases = tf.Variable(0.1, name='l2-biases')
+        l2_biases = tf.Variable(tf.constant(0.1, shape=[l2_units]), name='l2-biases')
         layer2 = tf.nn.relu(tf.matmul(layer1, l2_weights) + l2_biases)
 
         # Define output layer
-        out_weights = make_weight_variable("out-weights", l2_units, len(chars) + 1)
-        out_biases = tf.Variable(0.1, name='out-biases')
+        out_len = len(chars) + 1
+        out_weights = make_weight_variable("out-weights", l2_units, out_len)
+        out_biases = tf.Variable(tf.constant(0.1, shape=[out_len]), name='out-biases')
         self.out_logits = tf.matmul(layer2, out_weights) + out_biases
 
         # Define training objective
